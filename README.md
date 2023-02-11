@@ -5,17 +5,17 @@ Reference: https://docs.cloud.coinbase.com/advanced-trade-api/docs/rest-api-over
 
 With the move from Coinbase Pro, Coinbase's trading API has been merged with the API for Coinbase's wallet functionality. This library only supports the Advanced Trade API, which includes the following methods:
 
-`List Accounts` - Get a list of all accounts (wallets)
-`Get Account` - Get details for one account
-`Create Order` - Place a new order on the exchange
-`Cancel Orders` - Cancel one or more orders that have already been placed
-`List Orders` - Get a list of all orders that meet the specified criteria
-`List Fills` - Get a list of all fills (matches) that meet the specified criteria
-`Get Order` - Get details for one order
-`List Products` - Get a list of all products (trading pairs)
-`Get Product` - Get details for one product
-`Get Product Candles` - Get historical market data for one product
-`Get Market Trades` - Get the latest trades for one product
+- `List Accounts` - Get a list of all accounts (wallets)
+- `Get Account` - Get details for one account
+- `Create Order` - Place a new order on the exchange
+- `Cancel Orders` - Cancel one or more orders that have already been placed
+- `List Orders` - Get a list of all orders that meet the specified criteria
+- `List Fills` - Get a list of all fills (matches) that meet the specified criteria
+- `Get Order` - Get details for one order
+- `List Products` - Get a list of all products (trading pairs)
+- `Get Product` - Get details for one product
+- `Get Product Candles` - Get historical market data for one product
+- `Get Market Trades` - Get the latest trades for one product
 
 ## Credentials
 
@@ -27,10 +27,10 @@ There are two ways to provide your credentials when creating a client:
 
 Set the following environment variables in your OS:
 
-`COINBASE_KEY` - Your API key
-`COINBASE_SECRET` - Your API secret
-`COINBASE_HOST` (Optional) - Use a host other than `https://coinbase.com`
-`COINBASE_PATH` (Optional) - Use a path other than `/api/v3/brokerage`
+- `COINBASE_KEY` - Your API key
+- `COINBASE_SECRET` - Your API secret
+- `COINBASE_HOST` (Optional) - Use a host other than `https://coinbase.com`
+- `COINBASE_PATH` (Optional) - Use a path other than `/api/v3/brokerage`
 
 You can now create a client within your project without needing to specify any parameters:
 
