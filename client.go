@@ -60,7 +60,7 @@ type ClientConfig struct {
 	Secret string
 }
 
-func NewClient(config *ClientConfig) Client {
+func NewClient(config *ClientConfig) *Client {
 	cc := Client{}
 	if config != nil {
 		cc = Client{
@@ -76,7 +76,7 @@ func NewClient(config *ClientConfig) Client {
 		Path: "/api/v3/brokerage",
 	}
 
-	c := Client{
+	c := &Client{
 		Host:   os.Getenv("COINBASE_HOST"),
 		Path:   os.Getenv("COINBASE_PATH"),
 		Key:    os.Getenv("COINBASE_KEY"),
@@ -119,6 +119,10 @@ func (c *Client) Request(m Method, endpoint string, query url.Values, payload []
 
 	// if we don't get a success code
 	if res.StatusCode != 200 {
+
+		if c.debug {
+			log.Printf("Error response: %s", data)
+		}
 
 		// attempt to unmarshal error
 		e := struct {
@@ -218,4 +222,9 @@ func (c *Client) sign(timestamp string, method Method, resource string, data []b
 
 func formatError(location string, err error) error {
 	return errors.New(location + ": " + err.Error())
+}
+
+// EnableDebug turns on some extra logging information
+func (c *Client) EnableDebug() {
+	c.debug = true
 }

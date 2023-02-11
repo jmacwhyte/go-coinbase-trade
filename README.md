@@ -35,7 +35,7 @@ Set the following environment variables in your OS:
 You can now create a client within your project without needing to specify any parameters:
 
 ```
-client := coinbasetrade.NewClient()
+client := coinbasetrade.NewClient(nil)
 ```
 
 ### Pass credentials in code
