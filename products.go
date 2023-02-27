@@ -90,7 +90,7 @@ func (c *Client) ListProducts(params ListProductsParameters) (l ProductList, err
 
 // GetProduct takes a product ID and returns a Product object.
 func (c *Client) GetProduct(id string) (prod Product, err error) {
-	err = c.Request(Get, fmt.Sprintf(getProductEndpoint, id), url.Values{}, []byte{}, &prod, nil)
+	_, err = c.makeRequest(Get, fmt.Sprintf(getProductEndpoint, id), url.Values{}, []byte{}, &prod, nil)
 	return
 }
 
@@ -121,7 +121,7 @@ func (c *Client) GetProductCandles(id string, start, end time.Time, granularity 
 	query.Add("end", fmt.Sprintf("%d", end.Unix()))
 	query.Add("granularity", string(granularity))
 
-	err = c.Request(Get, fmt.Sprintf(getProductCandlesEndpoint, id), query, []byte{}, &res, nil)
+	_, err = c.makeRequest(Get, fmt.Sprintf(getProductCandlesEndpoint, id), query, []byte{}, &res, nil)
 	candles = res.Candles
 
 	for i, v := range candles {
@@ -157,6 +157,6 @@ func (c *Client) GetMarketTrades(product string, n int) (market MarketTrades, er
 	query := make(url.Values)
 	query.Add("limit", fmt.Sprintf("%d", n))
 
-	err = c.Request(Get, fmt.Sprintf(getMarketTradesEndpoint, product), query, []byte{}, &market, nil)
+	_, err = c.makeRequest(Get, fmt.Sprintf(getMarketTradesEndpoint, product), query, []byte{}, &market, nil)
 	return
 }

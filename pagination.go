@@ -53,7 +53,7 @@ func (p *Pagination) NextPage() error {
 		query.Add("offset", strconv.Itoa(p.offset))
 	}
 
-	if err := p.client.Request(p.method, p.endpoint, query, []byte{}, p.parent, &pg); err != nil {
+	if _, err := p.client.makeRequest(p.method, p.endpoint, query, []byte{}, p.parent, &pg); err != nil {
 		return err
 	}
 

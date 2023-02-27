@@ -105,14 +105,14 @@ func NewClient(config *ClientConfig) *Client {
 	return c
 }
 
-func (c *Client) Request(m Method, endpoint string, query url.Values, payload []byte, result, pagination interface{}) (err error) {
+// makeRequest is a convenience function that makes a request, unmarshals the response into any
+// provided interfaces, and also returns the raw response in case you need to do something else
+func (c *Client) makeRequest(m Method, endpoint string, query url.Values, payload []byte, result, pagination interface{}) (data []byte, err error) {
 
 	// ensure we observe the minimum interval time
 	time.Sleep(time.Until(c.lastCall.Add(apiInterval)))
 
-	var data []byte
 	var res *http.Response
-
 	if data, res, err = c.request(m, endpoint, query, payload); err != nil {
 		return
 	}
@@ -138,7 +138,8 @@ func (c *Client) Request(m Method, endpoint string, query url.Values, payload []
 			e.Message += " [API key or secret is missing]"
 		}
 
-		return formatError("api response", errors.New(e.Message))
+		err = formatError("api response", errors.New(e.Message))
+		return
 	}
 
 	// if an interface was passed, try to unmarshal the response
@@ -148,20 +149,23 @@ func (c *Client) Request(m Method, endpoint string, query url.Values, payload []
 				log.Printf("API response causing error: %s\n", data)
 			}
 
-			return formatError("unmarshal api result", err)
+			err = formatError("unmarshal api result", err)
+			return
 		}
 	}
 
 	// if pagination data is requested, try to unmarshal that too
 	if pagination != nil {
 		if err = json.Unmarshal(data, &pagination); err != nil {
-			return formatError("unmarshal pagination result", err)
+			err = formatError("unmarshal pagination result", err)
+			return
 		}
 	}
 
 	return
 }
 
+// request just handles the raw request to the API
 func (c *Client) request(m Method, endpoint string, query url.Values, payload []byte) (body []byte, res *http.Response, err error) {
 	uri := fmt.Sprintf("%s%s%s?%s", c.Host, c.Path, endpoint, query.Encode())
 	bod := bytes.NewReader(payload)

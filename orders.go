@@ -106,32 +106,33 @@ const (
 // it is left as a string for now.
 type Order struct {
 	// used by ListOrders
-	ID                   string                        `json:"order_id,omitempty"`
-	Product              string                        `json:"product_id"`
-	UserID               string                        `json:"user_id,omitempty"`
-	OrderConfiguration   map[string]OrderConfiguration `json:"order_configuration"`
-	Side                 Side                          `json:"side"`
-	ClientOrderID        string                        `json:"client_order_id"`
-	Status               string                        `json:"status,omitempty"`
-	TimeInForce          TimeInForce                   `json:"time_in_force,omitempty"`
-	CreatedTime          time.Time                     `json:"created_time,omitempty"`
-	CompletionPercentage decimal.Decimal               `json:"completion_percentage,omitempty"`
-	FilledSize           decimal.Decimal               `json:"filled_size,omitempty"`
-	AverageFilledPrice   decimal.Decimal               `json:"average_filled_price,omitempty"`
-	Fee                  string                        `json:"fee,omitempty"`
-	NumberOfFills        decimal.Decimal               `json:"number_of_fills,omitempty"`
-	FilledValue          decimal.Decimal               `json:"filled_value,omitempty"`
-	PendingCancel        bool                          `json:"pending_cancel,omitempty"`
-	SizeInQuote          bool                          `json:"size_in_quote,omitempty"`
-	TotalFees            decimal.Decimal               `json:"total_fees,omitempty"`
-	SizeInclusiveOfFees  bool                          `json:"size_inclusive_of_fees,omitempty"`
-	TotalValueAfterFees  decimal.Decimal               `json:"total_value_after_fees,omitempty"`
-	TriggerStatus        TriggerStatus                 `json:"trigger_status,omitempty"`
-	// This doesn't seem important:
-	// Type                 OrderType                     `json:"order_type,omitempty"`
-	RejectReason string      `json:"reject_reason,omitempty"`
-	Settled      bool        `json:"settled,omitempty"`
-	ProductType  ProductType `json:"product_type,omitempty"`
+	ID                 string             `json:"order_id,omitempty"`
+	Product            string             `json:"product_id"`
+	UserID             string             `json:"user_id,omitempty"`
+	OrderConfiguration OrderConfiguration `json:"-"`
+	// OrderConfiguration   OrderConfiguration `json:"order_configuration"`
+	Side                 Side            `json:"side"`
+	ClientOrderID        string          `json:"client_order_id"`
+	Status               string          `json:"status,omitempty"`
+	TimeInForce          TimeInForce     `json:"time_in_force,omitempty"`
+	CreatedTime          time.Time       `json:"created_time,omitempty"`
+	CompletionPercentage decimal.Decimal `json:"completion_percentage,omitempty"`
+	FilledSize           decimal.Decimal `json:"filled_size,omitempty"`
+	AverageFilledPrice   decimal.Decimal `json:"average_filled_price,omitempty"`
+	Fee                  string          `json:"fee,omitempty"`
+	NumberOfFills        decimal.Decimal `json:"number_of_fills,omitempty"`
+	FilledValue          decimal.Decimal `json:"filled_value,omitempty"`
+	PendingCancel        bool            `json:"pending_cancel,omitempty"`
+	SizeInQuote          bool            `json:"size_in_quote,omitempty"`
+	TotalFees            decimal.Decimal `json:"total_fees,omitempty"`
+	SizeInclusiveOfFees  bool            `json:"size_inclusive_of_fees,omitempty"`
+	TotalValueAfterFees  decimal.Decimal `json:"total_value_after_fees,omitempty"`
+	TriggerStatus        TriggerStatus   `json:"trigger_status,omitempty"`
+	Type                 OrderType       `json:"order_type,omitempty"`
+	RejectReason         string          `json:"reject_reason,omitempty"`
+	Settled              bool            `json:"settled,omitempty"`
+	ProductType          ProductType     `json:"product_type,omitempty"`
+	OutstandingHold      decimal.Decimal `json:"outstanding_hold_amount"`
 
 	// used by GetOrder
 	RejectMessage string `json:"reject_message,omitempty"`
@@ -143,73 +144,81 @@ type Order struct {
 // is set to the type of order. Use GetOrderConfiguration and SetOrderConfiguration instead of accesing
 // the map directly.
 type OrderConfiguration struct {
-	Type          OrderConfigurationType
-	QuoteSize     decimal.Decimal `json:"quote_size,omitempty"`
-	BaseSize      decimal.Decimal `json:"base_size,omitempty"`
-	LimitPrice    decimal.Decimal `json:"limit_price,omitempty"`
-	StopPrice     decimal.Decimal `json:"stop_price,omitempty"`
-	StopDirection StopDirection   `json:"stop_direction,omitempty"`
-	EndTime       time.Time       `json:"end_time,omitempty"`
-	PostOnly      bool            `json:"post_only,omitempty"`
+	Type          OrderConfigurationType `json:"-"`
+	QuoteSize     decimal.Decimal        `json:"quote_size,omitempty"`
+	BaseSize      decimal.Decimal        `json:"base_size,omitempty"`
+	LimitPrice    decimal.Decimal        `json:"limit_price,omitempty"`
+	StopPrice     decimal.Decimal        `json:"stop_price,omitempty"`
+	StopDirection StopDirection          `json:"stop_direction,omitempty"`
+	EndTime       time.Time              `json:"-"`
+	PostOnly      bool                   `json:"post_only,omitempty"`
 }
 
-// GetOrderConfiguration is the best way to retrieve the order configuration from an order that has
-// been returned from the API
-func (o *Order) GetOrderConfiguration() (c OrderConfiguration) {
-	c.Type = UnknownOrderConfiguration
-	for k, v := range o.OrderConfiguration {
-		for _, t := range []OrderConfigurationType{
-			MarketIOC,
-			LimitGTC,
-			LimitGTD,
-			StopLimitGTC,
-			StopLimitGTD,
-		} {
-			if k == string(t) {
-				c = v
-				c.Type = t
-			}
-		}
+// toMap builds a map of strings from the order config for use with the api
+func (oc OrderConfiguration) toMap() (m map[string]string) {
+	m = make(map[string]string)
+	if !oc.QuoteSize.IsZero() {
+		m["quote_size"] = oc.QuoteSize.String()
+	}
+	if !oc.BaseSize.IsZero() {
+		m["base_size"] = oc.BaseSize.String()
+	}
+	if !oc.LimitPrice.IsZero() {
+		m["limit_price"] = oc.LimitPrice.String()
+	}
+	if !oc.StopPrice.IsZero() {
+		m["stop_price"] = oc.StopPrice.String()
+	}
+	if oc.StopDirection != "" {
+		m["stop_direction"] = string(oc.StopDirection)
+	}
+	if !oc.EndTime.IsZero() {
+		m["end_time"] = timeToString(oc.EndTime)
+	}
+	if oc.PostOnly {
+		m["post_only"] = "true"
 	}
 	return
 }
 
-// SetOrderConfiguration is the best way to set the order configuration for an order you have yet to place.
-func (o *Order) SetOrderConfiguration(c OrderConfiguration) {
-	o.OrderConfiguration = map[string]OrderConfiguration{
-		string(c.Type): c,
+// getType returns the order configuration type, based on the values that are set
+func (oc OrderConfiguration) getType() OrderConfigurationType {
+	// classify order config
+	gtd := !oc.EndTime.IsZero()
+	stop := !oc.StopPrice.IsZero()
+	limit := !oc.LimitPrice.IsZero()
+
+	switch {
+	case !limit: // if no limit price, it's a market order
+		return MarketIOC
+	case !gtd && !stop: // if no end date or stop price, it's a limit gtc
+		return LimitGTC
+	case gtd && !stop: // if there is an end date but no stop price, it's a limit gtd
+		return LimitGTD
+	case !gtd && stop: // if there is a stop price but no end date, it's a stop limit gtc
+		return StopLimitGTC
+	default: // must be a stop limit gtd
+		return StopLimitGTD
 	}
 }
 
-// CreateOrder will submit your order details and return a populated `Order` object. You must include a valid
+// CreateOrder will submit your raw order details and return a populated `Order` object. You must include a valid
 // `OrderConfiguration` based on the type of order you wish to place. If the combination of data populated in
-// the order config is invalid, the server will return an error.
+// the order config is invalid, the server will return an error. It is recommended to use one of the helper functions
+// instead (PlaceMarketIOC, PlaceLimitGTC, etc)
 func (c *Client) CreateOrder(clientOrderId string, productId string, side Side, orderConfig OrderConfiguration) (order Order, errorType CreateOrderError, err error) {
-	//classify order config
-	gtd := !orderConfig.EndTime.IsZero()
-	stop := !orderConfig.StopPrice.IsZero()
-	limit := !orderConfig.LimitPrice.IsZero()
 
-	var t OrderConfigurationType
-	switch {
-	case !limit:
-		t = MarketIOC
-	case !gtd && !stop:
-		t = LimitGTC
-	case gtd && !stop:
-		t = LimitGTD
-	case !gtd && stop:
-		t = StopLimitGTC
-	default:
-		t = StopLimitGTD
+	// if no client id is specified, use unix time in milliseconds
+	if clientOrderId == "" {
+		clientOrderId = fmt.Sprintf("%d", time.Now().UnixMilli())
 	}
 
 	wrapper := struct {
-		ClientOrderID      string                        `json:"client_order_id"`
-		ProductID          string                        `json:"product_id"`
-		Side               Side                          `json:"side"`
-		OrderConfiguration map[string]OrderConfiguration `json:"order_configuration"`
-	}{clientOrderId, productId, side, map[string]OrderConfiguration{string(t): orderConfig}}
+		ClientOrderID      string                       `json:"client_order_id"`
+		ProductID          string                       `json:"product_id"`
+		Side               Side                         `json:"side"`
+		OrderConfiguration map[string]map[string]string `json:"order_configuration"`
+	}{clientOrderId, productId, side, map[string]map[string]string{string(orderConfig.Type): orderConfig.toMap()}}
 
 	var payload []byte
 	if payload, err = json.Marshal(wrapper); err != nil {
@@ -227,7 +236,7 @@ func (c *Client) CreateOrder(clientOrderId string, productId string, side Side, 
 		} `json:"error_response"`
 	}{}
 
-	if err = c.Request(Post, createOrderEndpoint, url.Values{}, payload, &response, nil); err != nil {
+	if _, err = c.makeRequest(Post, createOrderEndpoint, url.Values{}, payload, &response, nil); err != nil {
 		err = formatError("api connection error", err)
 		return
 	}
@@ -236,7 +245,7 @@ func (c *Client) CreateOrder(clientOrderId string, productId string, side Side, 
 		order = Order{
 			ID:                 response.OrderID,
 			Side:               side,
-			OrderConfiguration: response.OrderConfig,
+			OrderConfiguration: response.OrderConfig[string(orderConfig.getType())],
 		}
 		return
 	}
@@ -266,7 +275,7 @@ func (c *Client) CancelOrders(orderIds []string) (cancelErrors map[string]Cancel
 		} `json:"results"`
 	}{}
 
-	if err = c.Request(Post, cancelOrdersEndpoint, url.Values{}, payload, &response, nil); err != nil {
+	if _, err = c.makeRequest(Post, cancelOrdersEndpoint, url.Values{}, payload, &response, nil); err != nil {
 		err = formatError("api connection error", err)
 		return
 	}
@@ -369,11 +378,38 @@ func (c *Client) ListFills(params ListFillsParameters) (l FillList, err error) {
 // GetOrder takes the order id assigned by Coinbase and returns a populated `Order` object containing the
 // latest details from the server.
 func (c *Client) GetOrder(id string) (o Order, err error) {
+	// get order
+	var data []byte
+	if data, err = c.makeRequest(Get, fmt.Sprintf(getOrderEndpoint, id), url.Values{}, []byte{}, nil, nil); err != nil {
+		return
+	}
+
+	// unmarshal the response, but the order config won't match up
 	wrapper := &struct {
 		Order *Order `json:"order"`
 	}{&o}
 
-	err = c.Request(Get, fmt.Sprintf(getOrderEndpoint, id), url.Values{}, []byte{}, wrapper, nil)
+	if err = json.Unmarshal(data, wrapper); err != nil {
+		return
+	}
+
+	// unmarshal just the order config
+	ocwrapper := &struct {
+		Order struct {
+			Config map[string]OrderConfiguration `json:"order_configuration"`
+		} `json:"order"`
+	}{}
+
+	if err = json.Unmarshal(data, ocwrapper); err != nil {
+		return
+	}
+
+	for _, v := range ocwrapper.Order.Config {
+		o.OrderConfiguration = v
+		break
+	}
+	o.OrderConfiguration.Type = o.OrderConfiguration.getType()
+
 	return
 }
 
@@ -386,4 +422,73 @@ func (c *Client) UpdateOrder(order *Order) (err error) {
 
 	*order = neworder
 	return
+}
+
+// PlaceMarketIOC is a helper function to place a market "immediate or cancel" order.
+func (c *Client) PlaceMarketIOC(clientOrderId string, productId string, side Side, size decimal.Decimal) (order Order, errorType CreateOrderError, err error) {
+	oc := OrderConfiguration{
+		Type: MarketIOC,
+	}
+	if side == Buy {
+		oc.QuoteSize = size
+	} else {
+		oc.BaseSize = size
+	}
+	return c.CreateOrder(clientOrderId, productId, side, oc)
+}
+
+// PlaceLimitGTC is a helper function to place a limit "good till closed" order. If you want to place
+// a "post only" order, set postOnly to true.
+func (c *Client) PlaceLimitGTC(clientOrderId string, productId string, side Side, size decimal.Decimal, price decimal.Decimal, postOnly bool) (order Order, errorType CreateOrderError, err error) {
+	oc := OrderConfiguration{
+		Type:       LimitGTC,
+		BaseSize:   size,
+		LimitPrice: price,
+		PostOnly:   postOnly,
+	}
+
+	return c.CreateOrder(clientOrderId, productId, side, oc)
+}
+
+// PlaceLimitGTD is a helper function to place a limit "good till date" order. If you want to place
+// a "post only" order, set postOnly to true.
+func (c *Client) PlaceLimitGTD(clientOrderId string, productId string, side Side, size decimal.Decimal, price decimal.Decimal, endTime time.Time, postOnly bool) (order Order, errorType CreateOrderError, err error) {
+	oc := OrderConfiguration{
+		Type:       LimitGTD,
+		BaseSize:   size,
+		LimitPrice: price,
+		EndTime:    endTime,
+		PostOnly:   postOnly,
+	}
+
+	return c.CreateOrder(clientOrderId, productId, side, oc)
+}
+
+// PlaceStopLimitGTC is a helper function to place a limit "good till close" order with a stop loss
+// price.
+func (c *Client) PlaceStopLimitGTC(clientOrderId string, productId string, side Side, size decimal.Decimal, price decimal.Decimal, stopPrice decimal.Decimal, stopDirection StopDirection) (order Order, errorType CreateOrderError, err error) {
+	oc := OrderConfiguration{
+		Type:          LimitGTD,
+		BaseSize:      size,
+		LimitPrice:    price,
+		StopPrice:     stopPrice,
+		StopDirection: stopDirection,
+	}
+
+	return c.CreateOrder(clientOrderId, productId, side, oc)
+}
+
+// PlaceStopLimitGTD is a helper function to place a limit "good till date" order with a stop loss
+// price.
+func (c *Client) PlaceStopLimitGTD(clientOrderId string, productId string, side Side, size decimal.Decimal, price decimal.Decimal, stopPrice decimal.Decimal, stopDirection StopDirection, endTime time.Time) (order Order, errorType CreateOrderError, err error) {
+	oc := OrderConfiguration{
+		Type:          LimitGTD,
+		BaseSize:      size,
+		LimitPrice:    price,
+		StopPrice:     stopPrice,
+		EndTime:       endTime,
+		StopDirection: stopDirection,
+	}
+
+	return c.CreateOrder(clientOrderId, productId, side, oc)
 }

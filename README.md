@@ -17,6 +17,8 @@ With the move from Coinbase Pro, Coinbase's trading API has been merged with the
 - `Get Product Candles` - Get historical market data for one product
 - `Get Market Trades` - Get the latest trades for one product
 
+Access to the order book will be added later, as it uses a socket instead of REST.
+
 ## Credentials
 
 To use this library, you will need to initalize a client with the API key and secret provided by your Coinbase account. The `Host` and `Path` values only need to be provided if you want to use something other than the production server (e.g. sandbox testing, etc)
@@ -72,13 +74,12 @@ for ; list.Next(); list.NextPage() {
 
 ## Orders
 
-Orders store the product (trading pair) and side (buy or sell) for the order. They then use an `OrderConfiguration` object to specify the remaining details of the order (purchase price, size, expiration date, etc). These details will determine what type of order it is: Market, Limit (GTC/GTD), or Stop Loss (GTC/GTD). Due to the way the Coinbase API is designed, it is better to call `GetOrderConfiguration()` or `SetOrderConfiguration()` on an `Order` object instead of trying to access the details directly through the `Order` object. 
+Orders store the product (trading pair) and side (buy or sell) for the order. They then use an `OrderConfiguration` object to specify the remaining, optional details of the order (purchase price, size, expiration date, etc). These details will determine what type of order it is: Market, Limit (GTC/GTD), or Stop Loss (GTC/GTD).
 
 ```
 order, _ := client.GetOrder(orderID)
-config := order.GetOrderConfiguration()
 
-switch config.Type {
+switch order.OrderConfiguration.Type {
   case coinbasetrade.LimitGTC:
     // This is a limit order with no expiration time
     price := config.LimitPrice
@@ -90,17 +91,13 @@ switch config.Type {
 
 ### Placing a new order
 
+When placing a new order, it is recommended to use one of the helper functions which will ensure you submit the correct information for each order type. Every order requires a unique "client order id", however you can pass an empty string for this value and the library will use the current unix time in milliseconds as the order id.
+
+Placing an order with one of the `Place...` functions or the raw `CreatOrder` function will return an order object which you can later use to retrieve the updated details of the order. All of these functions will also return two error objects: the first represents an error returned by the Coinbase API (malformed request, unauthorized, etc), and the second represents an error at the networking level (server unavailable, etc).
+
 ```
-config := coinbasetrade.OrderConfiguration{
-  LimitPrice: decimal.NewFromFloat(10000),
-  BaseSize: decimal.NewFromFlaot(0.1),
-}
-
-// each order needs a unique id that we set, we'll use the current time for this example
-clientorderid := time.Now().String()
-product := "BTC-USD"
-
-placedOrder, _, err := client.CreateOrder(clientid, product, coinbasetrade.Buy, config)
+// Buy $1,000 worth of Bitcoin with a market order
+placedOrder, apierror, err := client.PlaceMarketIOC("", "BTC-USD", coinbasetrade.Buy, decimal.NewFromFloat(1000))
 ```
 
 ### Updating the status of an order

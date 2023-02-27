@@ -61,6 +61,6 @@ func (c *Client) GetAccount(id string) (acc Account, err error) {
 		Account *Account `json:"account"`
 	}{&acc}
 
-	err = c.Request(Get, fmt.Sprintf(getAccountEndpoint, id), url.Values{}, []byte{}, wrapper, nil)
+	_, err = c.makeRequest(Get, fmt.Sprintf(getAccountEndpoint, id), url.Values{}, []byte{}, wrapper, nil)
 	return
 }
