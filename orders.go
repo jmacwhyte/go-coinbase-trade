@@ -1,6 +1,7 @@
 package coinbasetrade
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -225,6 +226,10 @@ func (c *Client) CreateOrder(clientOrderId string, productId string, side Side, 
 		err = formatError("create order", err)
 		return
 	}
+
+	// convert post_only to boolean, because it's the only item the API expexcts to not be a string. This could cause an error
+	// if client id is set to a string of "true", but if that's the case you have bigger problems (i.e. not my fault)
+	payload = bytes.ReplaceAll(payload, []byte(`"true"`), []byte(`true`))
 
 	response := struct {
 		Success     bool                          `json:"success"`
